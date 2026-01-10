@@ -1,0 +1,8 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Use scheduler for automated runs, or rig_count_automation.py for one-time runs
+startCommand = "python rig_count_scheduler.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
