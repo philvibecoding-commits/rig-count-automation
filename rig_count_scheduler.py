@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def validate_environment():
     """Validate required environment variables are set"""
-    required_vars = ['EMAIL_ADDRESS', 'EMAIL_PASSWORD', 'TO_ADDRESS']
+    required_vars = ['RESEND_API_KEY', 'TO_ADDRESS']
     missing = []
     
     logger.info("Checking environment variables...")
@@ -34,8 +34,8 @@ def validate_environment():
             logger.error(f"  [MISSING] {var}")
         else:
             # Mask sensitive values
-            if 'PASSWORD' in var:
-                logger.info(f"  [OK] {var} = {'*' * len(value)}")
+            if 'KEY' in var or 'PASSWORD' in var:
+                logger.info(f"  [OK] {var} = {'*' * min(len(value), 20)}...")
             else:
                 logger.info(f"  [OK] {var} = {value}")
     
@@ -48,6 +48,8 @@ def validate_environment():
         logger.error("  1. Go to your Railway project")
         logger.error("  2. Click on Variables tab")
         logger.error("  3. Add the missing variables")
+        logger.error("")
+        logger.error("Get your free Resend API key at: https://resend.com")
         logger.error("=" * 60)
         return False
     
@@ -90,9 +92,10 @@ def main():
         logger.error("Waiting for configuration... (scheduler will stay alive)")
         logger.error("")
         logger.error("Add these variables in Railway, then redeploy:")
-        logger.error("  EMAIL_ADDRESS = your-email@gmail.com")
-        logger.error("  EMAIL_PASSWORD = your-app-password")
+        logger.error("  RESEND_API_KEY = your-resend-api-key")
         logger.error("  TO_ADDRESS = recipient@email.com")
+        logger.error("")
+        logger.error("Get free API key at: https://resend.com")
         logger.error("")
         # Keep the container alive but don't run jobs
         # This prevents crash loops while user configures env vars

@@ -1,10 +1,10 @@
 # Copy this file to .env and fill in your values
-# Email Configuration
-EMAIL_ADDRESS=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password-here
+
+# Resend API (get free key at https://resend.com)
+RESEND_API_KEY=re_xxxxxxxxxx
 TO_ADDRESS=recipient@example.com
 
 # Scheduler Configuration (optional)
-SCHEDULE_TIME=09:00
+SCHEDULE_TIME=18:30
 RUN_ON_STARTUP=true
 

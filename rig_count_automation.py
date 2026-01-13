@@ -1,17 +1,17 @@
 """
 Rig Count Automation - Main Script
 Scrapes Baker Hughes rig count data, generates Permian Basin chart, and emails it.
+Uses Resend API for email delivery (Railway blocks SMTP).
 """
 import os
 import sys
+import base64
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for Railway
 import matplotlib.pyplot as plt
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime
 import warnings
 import logging
@@ -120,47 +120,66 @@ def generate_permian_chart(excel_path):
 
 
 def send_email_with_chart(chart_path):
-    """Send email with rig count chart attachment"""
+    """Send email with rig count chart attachment using Resend API"""
     logger.info("Preparing email...")
     
-    # Get email credentials from environment variables
-    EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
-    EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+    # Get credentials from environment variables
+    RESEND_API_KEY = os.getenv('RESEND_API_KEY')
     TO_ADDRESS = os.getenv('TO_ADDRESS')
     
-    if not EMAIL_ADDRESS or not EMAIL_PASSWORD or not TO_ADDRESS:
+    if not RESEND_API_KEY or not TO_ADDRESS:
         raise ValueError(
-            "Missing required environment variables: EMAIL_ADDRESS, EMAIL_PASSWORD, TO_ADDRESS"
+            "Missing required environment variables: RESEND_API_KEY, TO_ADDRESS"
         )
     
-    msg = EmailMessage()
-    msg["Subject"] = f"Automated Permian Rig Count Chart - {datetime.now().strftime('%Y-%m-%d')}"
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = TO_ADDRESS
-    msg.set_content("Attached is the latest Permian Basin rig count chart.")
-    
-    # Attach the image
+    # Read and encode the chart image
     try:
         with open(chart_path, "rb") as img:
-            msg.add_attachment(
-                img.read(), 
-                maintype="image", 
-                subtype="png", 
-                filename="permian_rig_chart.png"
-            )
-        logger.info("Chart attached to email")
+            chart_data = base64.b64encode(img.read()).decode('utf-8')
+        logger.info("Chart encoded for email attachment")
     except Exception as e:
-        logger.error(f"Error attaching chart: {e}")
+        logger.error(f"Error reading chart file: {e}")
         raise
     
-    # Send email
+    # Prepare email via Resend API
+    email_data = {
+        "from": "Rig Count Bot <onboarding@resend.dev>",
+        "to": [TO_ADDRESS],
+        "subject": f"Automated Permian Rig Count Chart - {datetime.now().strftime('%Y-%m-%d')}",
+        "html": """
+            <h2>Permian Basin Rig Count Report</h2>
+            <p>Attached is the latest Permian Basin rig count chart from Baker Hughes.</p>
+            <p>This is an automated weekly report.</p>
+        """,
+        "attachments": [
+            {
+                "filename": "permian_rig_chart.png",
+                "content": chart_data
+            }
+        ]
+    }
+    
+    # Send email via Resend API
     try:
-        logger.info(f"Sending email to {TO_ADDRESS}...")
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            smtp.send_message(msg)
-        logger.info("Email sent successfully!")
-    except Exception as e:
+        logger.info(f"Sending email to {TO_ADDRESS} via Resend...")
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=email_data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            logger.info("Email sent successfully!")
+            logger.info(f"Resend response: {response.json()}")
+        else:
+            logger.error(f"Resend API error: {response.status_code} - {response.text}")
+            raise Exception(f"Failed to send email: {response.text}")
+            
+    except requests.RequestException as e:
         logger.error(f"Error sending email: {e}")
         raise
 
