@@ -1,6 +1,6 @@
 """
 Scheduler for running rig count automation on Railway
-Runs the automation script on a schedule (default: daily at 9 AM UTC)
+Runs the automation script on a schedule (default: every Friday at 18:30 UTC / 12:30 PM CST)
 """
 import os
 import sys
@@ -103,14 +103,14 @@ def main():
                 break
     
     # Get schedule settings
-    schedule_time = os.getenv('SCHEDULE_TIME', '09:00')
+    schedule_time = os.getenv('SCHEDULE_TIME', '18:30')  # Default: 18:30 UTC = 12:30 PM CST
     run_on_startup = os.getenv('RUN_ON_STARTUP', 'true').lower() == 'true'
     
-    logger.info(f"Schedule: Daily at {schedule_time} UTC")
+    logger.info(f"Schedule: Every Friday at {schedule_time} UTC (12:30 PM CST)")
     logger.info(f"Run on startup: {run_on_startup}")
     
-    # Schedule the job
-    schedule.every().day.at(schedule_time).do(run_rig_count_job)
+    # Schedule the job - runs every Friday
+    schedule.every().friday.at(schedule_time).do(run_rig_count_job)
     
     # Run immediately on startup if configured
     if run_on_startup:
